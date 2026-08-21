@@ -1,0 +1,260 @@
+name: ${COMPOSE_PROJECT_NAME:-manufacturing-llmops}
+
+# ---------------------------------------------------------------------------
+# Manufacturing Maintenance Intelligence Platform
+# Target hardware: Ubuntu 24.04, 4 vCPU, ~15 GiB RAM, CPU-only, no GPU.
+#
+# `bentoml-small` and `bentoml-medium` start by default (small footprint,
+# needed for basic serving + routing + monitoring tasks).
+# `bentoml-quantized` is behind the "quantization" profile so all three
+# models are never forced to run at once - start it only for Task 5:
+#   docker compose --profile quantization up -d bentoml-quantized
+#
+# Langfuse is exposed to the HOST on port 3030 (http://localhost:3030) -
+# no host port 3000 is used anywhere in this stack. Internally, the
+# `langfuse` container still listens on its native port 3000 inside the
+# Docker network only (LANGFUSE_HOST=http://langfuse:3000 below); that
+# internal, container-to-container address is never reachable from the
+# host or the browser.
+# ---------------------------------------------------------------------------
+
+services:
+  bentoml-small:
+    build:
+      context: ./serving
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: small
+    container_name: manufacturing-llmops-bentoml-small
+    restart: unless-stopped
+    environment:
+      MODEL_ALIAS: small-model
+      MODEL_PATH: ${SMALL_MODEL_PATH:-/models/qwen-0.5b/qwen2.5-0.5b-instruct-q4_k_m.gguf}
+      LLAMA_CTX_SIZE: ${LLAMA_CTX_SIZE:-2048}
+      LLAMA_THREADS: ${LLAMA_THREADS_SMALL:-2}
+      LLAMA_MAX_TOKENS: ${LLAMA_MAX_TOKENS:-256}
+      PRICING_CONFIG_PATH: /app/config/pricing.yaml
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    volumes:
+      - ./models/qwen-0.5b:/models/qwen-0.5b:ro
+      - ./config:/app/config:ro
+    ports:
+      - "${SMALL_SERVICE_PORT:-3001}:3000"
+    networks:
+      - llmops-net
+    mem_limit: 3g
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  bentoml-medium:
+    build:
+      context: ./serving
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: medium
+    container_name: manufacturing-llmops-bentoml-medium
+    restart: unless-stopped
+    environment:
+      MODEL_ALIAS: medium-model
+      MODEL_PATH: ${MEDIUM_MODEL_PATH:-/models/qwen-1.5b/qwen2.5-1.5b-instruct-fp16.gguf}
+      LLAMA_CTX_SIZE: ${LLAMA_CTX_SIZE:-2048}
+      LLAMA_THREADS: ${LLAMA_THREADS_MEDIUM:-2}
+      LLAMA_MAX_TOKENS: ${LLAMA_MAX_TOKENS:-256}
+      PRICING_CONFIG_PATH: /app/config/pricing.yaml
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    volumes:
+      - ./models/qwen-1.5b:/models/qwen-1.5b:ro
+      - ./config:/app/config:ro
+    ports:
+      - "${MEDIUM_SERVICE_PORT:-3002}:3000"
+    networks:
+      - llmops-net
+    mem_limit: 5g
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  bentoml-quantized:
+    profiles: ["quantization"]
+    build:
+      context: ./serving
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: quantized
+    container_name: manufacturing-llmops-bentoml-quantized
+    restart: unless-stopped
+    environment:
+      MODEL_ALIAS: quantized-model
+      MODEL_PATH: ${QUANTIZED_MODEL_PATH:-/models/qwen-1.5b-q4/qwen2.5-1.5b-instruct-q4_k_m.gguf}
+      LLAMA_CTX_SIZE: ${LLAMA_CTX_SIZE:-2048}
+      LLAMA_THREADS: ${LLAMA_THREADS_QUANTIZED:-2}
+      LLAMA_MAX_TOKENS: ${LLAMA_MAX_TOKENS:-256}
+      PRICING_CONFIG_PATH: /app/config/pricing.yaml
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://langfuse:3000}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    volumes:
+      - ./models/qwen-1.5b-q4:/models/qwen-1.5b-q4:ro
+      - ./config:/app/config:ro
+    ports:
+      - "${QUANTIZED_SERVICE_PORT:-3003}:3000"
+    networks:
+      - llmops-net
+    mem_limit: 2g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  litellm-gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: manufacturing-llmops-litellm
+    restart: unless-stopped
+    depends_on:
+      bentoml-small:
+        condition: service_healthy
+      bentoml-medium:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-local-dev-key}
+      LITELLM_REQUEST_TIMEOUT: ${LITELLM_REQUEST_TIMEOUT:-60}
+    volumes:
+      - ./gateway/litellm_config.yaml:/app/litellm_config.yaml:ro
+    ports:
+      - "${LITELLM_PORT:-4000}:4000"
+    networks:
+      - llmops-net
+    mem_limit: 512m
+    cpus: 0.5
+
+  langfuse-db:
+    image: postgres:15-alpine
+    container_name: manufacturing-llmops-langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${LANGFUSE_DB_USER:-langfuse}
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse}
+      POSTGRES_DB: ${LANGFUSE_DB_NAME:-langfuse}
+    volumes:
+      - langfuse-db-data:/var/lib/postgresql/data
+    ports:
+      - "${LANGFUSE_DB_PORT:-5433}:5432"
+    networks:
+      - llmops-net
+    mem_limit: 512m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LANGFUSE_DB_USER:-langfuse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  langfuse:
+    image: langfuse/langfuse:2
+    container_name: manufacturing-llmops-langfuse
+    restart: unless-stopped
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${LANGFUSE_DB_USER:-langfuse}:${LANGFUSE_DB_PASSWORD:-langfuse}@langfuse-db:5432/${LANGFUSE_DB_NAME:-langfuse}
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3030}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-local-dev-nextauth-secret-change-me}
+      SALT: ${LANGFUSE_SALT:-local-dev-salt-change-me}
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+    ports:
+      # Host port is fixed at 3030 per platform requirements - the container
+      # itself still listens on its native port 3000 internally.
+      - "${LANGFUSE_PORT:-3030}:3000"
+    networks:
+      - llmops-net
+    mem_limit: 1g
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: manufacturing-llmops-backend
+    restart: unless-stopped
+    depends_on:
+      litellm-gateway:
+        condition: service_started
+    environment:
+      LITELLM_BASE_URL: http://litellm-gateway:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-local-dev-key}
+      ROUTING_CONFIG_PATH: /app/config/routing.yaml
+      PRICING_CONFIG_PATH: /app/config/pricing.yaml
+      SIMPLE_WORD_THRESHOLD: ${SIMPLE_WORD_THRESHOLD:-12}
+    volumes:
+      - ./config:/app/config:ro
+    ports:
+      - "${BACKEND_PORT:-8002}:8080"
+    networks:
+      - llmops-net
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: manufacturing-llmops-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_PUBLIC_URL: http://localhost:${BACKEND_PORT:-8002}
+      LANGFUSE_PUBLIC_URL: http://localhost:${LANGFUSE_PORT:-3030}
+    ports:
+      - "${FRONTEND_PORT:-8001}:80"
+    networks:
+      - llmops-net
+    mem_limit: 128m
+    cpus: 0.25
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  llmops-net:
+    driver: bridge
+
+volumes:
+  langfuse-db-data:
+

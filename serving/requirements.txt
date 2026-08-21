@@ -1,0 +1,5 @@
+bentoml==1.2.16
+pydantic==2.6.4
+llama-cpp-python==0.2.90
+langfuse==2.36.2
+PyYAML==6.0.1

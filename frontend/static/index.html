@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manufacturing Maintenance Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark">⚙️</span>
+        <div>
+          <h1>Manufacturing Maintenance Assistant</h1>
+          <p class="subtitle">Ask a maintenance question — simple questions are answered fast, complex ones get deeper reasoning.</p>
+        </div>
+      </div>
+      <div class="status" id="backend-status">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">Checking backend…</span>
+      </div>
+    </header>
+
+    <main class="chat-shell">
+      <div class="chat-window" id="chat-window">
+        <div class="message assistant">
+          <div class="bubble">
+            👋 Hi! Ask me anything about equipment maintenance — for example,
+            <em>"What does high motor temperature indicate?"</em>
+          </div>
+        </div>
+      </div>
+
+      <form class="composer" id="composer">
+        <textarea
+          id="prompt-input"
+          placeholder="Describe a symptom, ask a question, or paste a failure log…"
+          rows="2"
+        ></textarea>
+        <button type="submit" id="send-button">Send</button>
+      </form>
+    </main>
+
+    <footer class="app-footer">
+      <span>Routing, tokens, latency and cost are shown under each response.</span>
+      <span>Monitoring: <a href="#" id="langfuse-link" target="_blank" rel="noopener">Open Langfuse</a></span>
+    </footer>
+  </div>
+
+  <script src="env.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

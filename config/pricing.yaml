@@ -1,0 +1,18 @@
+# Simulated local pricing used ONLY for token-cost-tracking exercises (SK-JF5-09).
+# These numbers are not real API prices - they exist so students can practice
+# computing input/output/total cost from token counts.
+
+pricing:
+  small-model:
+    input_per_1k_tokens: 0.0002
+    output_per_1k_tokens: 0.0004
+
+  medium-model:
+    input_per_1k_tokens: 0.0005
+    output_per_1k_tokens: 0.0010
+
+  quantized-model:
+    input_per_1k_tokens: 0.0003
+    output_per_1k_tokens: 0.0006
+
+currency: "USD"

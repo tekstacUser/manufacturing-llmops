@@ -1,0 +1,31 @@
+# Deterministic routing rules used by scripts/test_routing.sh and load_test.py
+# to decide which alias a request should hit. LiteLLM itself just exposes the
+# aliases (see gateway/litellm_config.yaml) - this file documents and drives
+# the assessment-side routing decision logic.
+
+routing:
+  strategy: "prompt-length-heuristic"
+  description: >
+    Requests are classified as "simple" or "complex" using a simple,
+    deterministic word-count threshold so the routing decision can be
+    verified automatically without depending on an external classifier.
+
+  rules:
+    - name: simple
+      condition: "word_count <= 12"
+      target_alias: "small-model"
+
+    - name: complex
+      condition: "word_count > 12"
+      target_alias: "medium-model"
+
+  # Used by scripts/test_quantization.sh to explicitly compare the medium
+  # model against its quantized counterpart on the *same* prompts.
+  quantization_comparison:
+    baseline_alias: "medium-model"
+    quantized_alias: "quantized-model"
+
+  fallback:
+    enabled: true
+    on_timeout: "small-model"
+    on_error: "small-model"

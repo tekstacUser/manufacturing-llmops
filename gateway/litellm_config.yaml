@@ -1,0 +1,49 @@
+# LiteLLM Gateway configuration (SK-JF5-04)
+#
+# Exposes three model aliases that route to the BentoML/llama.cpp services.
+# Each BentoML service implements an OpenAI-compatible /v1/chat/completions
+# endpoint, so LiteLLM talks to them using the standard "openai" provider
+# with a custom api_base - no external AI router is used.
+
+model_list:
+  - model_name: small-model
+    litellm_params:
+      model: openai/small-model
+      api_base: http://bentoml-small:3000/v1
+      api_key: "not-needed"
+      timeout: 60
+      max_retries: 1
+
+  - model_name: medium-model
+    litellm_params:
+      model: openai/medium-model
+      api_base: http://bentoml-medium:3000/v1
+      api_key: "not-needed"
+      timeout: 60
+      max_retries: 1
+
+  - model_name: quantized-model
+    litellm_params:
+      model: openai/quantized-model
+      api_base: http://bentoml-quantized:3000/v1
+      api_key: "not-needed"
+      timeout: 60
+      max_retries: 1
+
+router_settings:
+  # Deterministic fallback: if the "complex" (medium) model times out or
+  # errors, fall back to the fast small model so the assessment can still
+  # complete within the 1-hour window.
+  fallbacks:
+    - medium-model: ["small-model"]
+    - quantized-model: ["small-model"]
+  timeout: 60
+  num_retries: 1
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  request_timeout: 60
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

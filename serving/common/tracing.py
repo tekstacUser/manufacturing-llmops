@@ -1,10 +1,8 @@
 """
-Shared Langfuse instrumentation (SK-JF5-05).
+Shared Langfuse instrumentation.
 
 Wraps the Langfuse Python SDK so each serving container can log a trace for
-every inference call: model, prompt, response, token counts, latency and
-success/failure. Langfuse runs locally (docker-compose service `langfuse`) -
-no cloud Langfuse is used.
+every inference call: model, prompt, response, token counts, latency, and success/failure.
 """
 
 from __future__ import annotations
@@ -15,6 +13,7 @@ from typing import Optional
 
 logger = logging.getLogger("tracing")
 
+# Load environment variables for Langfuse configuration
 LANGFUSE_HOST = os.environ.get("LANGFUSE_HOST", "http://langfuse:3000")
 LANGFUSE_PUBLIC_KEY = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
 LANGFUSE_SECRET_KEY = os.environ.get("LANGFUSE_SECRET_KEY", "")
@@ -22,6 +21,9 @@ LANGFUSE_SECRET_KEY = os.environ.get("LANGFUSE_SECRET_KEY", "")
 _client = None
 _enabled = bool(LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY)
 
+# ==============================================================================
+# 1. CLIENT INITIALIZATION (PROVIDED)
+# ==============================================================================
 if _enabled:
     try:
         from langfuse import Langfuse
@@ -31,7 +33,7 @@ if _enabled:
             public_key=LANGFUSE_PUBLIC_KEY,
             secret_key=LANGFUSE_SECRET_KEY,
         )
-    except Exception as exc:  # pragma: no cover - defensive, must never break serving
+    except Exception as exc:  # Defensive fallback
         logger.warning("Langfuse client could not be initialized: %s", exc)
         _client = None
         _enabled = False
@@ -42,6 +44,9 @@ else:
     )
 
 
+# ==============================================================================
+# 2. LOG TRACE IMPLEMENTATION - TODO
+# ==============================================================================
 def log_trace(
     name: str,
     model: str,
@@ -72,11 +77,23 @@ def log_trace(
         "error": error,
     }
 
+    # Fallback to logger if client is disabled or uninitialized
     if not _enabled or _client is None:
         logger.info("[trace:no-langfuse] %s", payload)
         return
 
     try:
+        # ----------------------------------------------------------------------
+        # TODO Step 1: Create a Langfuse trace object
+        # ----------------------------------------------------------------------
+        # Instructions: Call `_client.trace(...)` with these exact parameter mappings:
+        #   - name: name
+        #   - input: prompt
+        #   - output: response_text if success else None
+        #   - metadata: metadata or {}
+        #   - tags: ["manufacturing-llmops", model]
+        #
+        # Write the following line:
         trace = _client.trace(
             name=name,
             input=prompt,
@@ -84,12 +101,19 @@ def log_trace(
             metadata=metadata or {},
             tags=["manufacturing-llmops", model],
         )
+
+        # ----------------------------------------------------------------------
+        # TODO Step 2: Create a generation attached to the trace
+        # ----------------------------------------------------------------------
+        # Instructions: Call `trace.generation(...)` specifying model, input, output,
+        # usage dictionary, metadata dictionary, and level status.
+        #
+        # Write the following block:
         trace.generation(
             name=f"{name}-generation",
             model=model,
             input=prompt,
             output=response_text if success else None,
-        
             usage={
                 "unit": "TOKENS",
                 "input": input_tokens,
@@ -99,15 +123,21 @@ def log_trace(
                 "output_cost": round(output_cost, 8),
                 "total_cost": round(estimated_cost, 8),
             },
-        
             metadata={
                 "latency_ms": round(latency_ms, 2),
                 "success": success,
                 "error": error,
             },
-        
             level="DEFAULT" if success else "ERROR",
         )
+
+        # ----------------------------------------------------------------------
+        # TODO Step 3: Flush the event buffer to server
+        # ----------------------------------------------------------------------
+        # Instructions: Send buffered observations immediately using the flush command.
+        #
+        # Write the following line:
         _client.flush()
-    except Exception as exc:  # pragma: no cover - never break serving on tracing failure
+
+    except Exception as exc:
         logger.warning("Failed to log Langfuse trace: %s", exc)

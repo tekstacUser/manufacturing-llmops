@@ -1,31 +1,52 @@
-# Deterministic routing rules used by scripts/test_routing.sh and load_test.py
-# to decide which alias a request should hit. LiteLLM itself just exposes the
-# aliases (see gateway/litellm_config.yaml) - this file documents and drives
-# the assessment-side routing decision logic.
+# =============================================================
+# Deterministic Routing Rules
+# =============================================================
+# Used by test scripts and load tests to decide which model alias a request
+# should hit. LiteLLM exposes the aliases—this file drives assessment logic.
+# =============================================================
+
+# TODO: Define top-level key 'routing:'
+#
+# Configure the following routing sections:
+# 1. Specify the classification strategy name under sub-key 'strategy' 
+#    (Hint: word-count-based prompt length strategy)
+#
+# 2. Provide a descriptive string explaining the strategy under 'description'
+#
+# 3. Define classification criteria array under sub-key for routing criteria:
+#    - Entry 1 (simple query): condition "word_count <= 12", target model alias for small queries
+#    - Entry 2 (complex query): condition "word_count > 12", target model alias for medium queries
+#
+# 4. Define comparison mapping under sub-key for comparing quantization performance:
+#    - baseline alias: alias of the unquantized medium model
+#    - quantized alias: alias of the optimized quantized model
+#
+# 5. Configure backup routing under sub-key for fallback mechanisms:
+#    - enabled: true
+#    - timeout target: default lightweight model alias
+#    - error target: default lightweight model alias
 
 routing:
-  strategy: "prompt-length-heuristic"
-  description: >
-    Requests are classified as "simple" or "complex" using a simple,
-    deterministic word-count threshold so the routing decision can be
-    verified automatically without depending on an external classifier.
+  # TODO: Add strategy name and description
+  # strategy: "<PROMPT_LENGTH_STRATEGY_NAME>"
+  # description: "..."
 
-  rules:
-    - name: simple
-      condition: "word_count <= 12"
-      target_alias: "small-model"
+  # TODO: Define routing criteria list
+  # <RULES_KEY>:
+  #   - name: simple
+  #     condition: "word_count <= 12"
+  #     <TARGET_ALIAS_KEY>: "<SMALL_MODEL_ALIAS>"
+  #   - name: complex
+  #     condition: "word_count > 12"
+  #     <TARGET_ALIAS_KEY>: "<MEDIUM_MODEL_ALIAS>"
 
-    - name: complex
-      condition: "word_count > 12"
-      target_alias: "medium-model"
+  # TODO: Define baseline vs quantized comparison aliases
+  # <QUANTIZATION_COMPARISON_KEY>:
+  #   baseline_alias: "<MEDIUM_MODEL_ALIAS>"
+  #   quantized_alias: "<QUANTIZED_MODEL_ALIAS>"
 
-  # Used by scripts/test_quantization.sh to explicitly compare the medium
-  # model against its quantized counterpart on the *same* prompts.
-  quantization_comparison:
-    baseline_alias: "medium-model"
-    quantized_alias: "quantized-model"
-
-  fallback:
-    enabled: true
-    on_timeout: "small-model"
-    on_error: "small-model"
+  # TODO: Define fallback options
+  # <FALLBACK_KEY>:
+  #   enabled: true
+  #   on_timeout: "<SMALL_MODEL_ALIAS>"
+  #   on_error: "<SMALL_MODEL_ALIAS>"

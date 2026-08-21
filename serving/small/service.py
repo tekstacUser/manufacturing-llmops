@@ -7,12 +7,9 @@ serving/quantized/service.py, which are thin copies pointing at a different
 MODEL_ALIAS / MODEL_PATH.
 
 Endpoints:
-  GET  /healthz                  -> health check (SK-JF5-01)
-  POST /generate                 -> simple {"prompt": "..."} inference,
-                                     returns token counts + cost + latency
-  POST /v1/chat/completions      -> OpenAI-compatible endpoint so LiteLLM
-                                     (SK-JF5-04) can route to this service
-                                     using the standard "openai" provider.
+  GET  /healthz                 -> health check
+  POST /generate                -> simple {"prompt": "..."} inference
+  POST /v1/chat/completions      -> OpenAI-compatible endpoint for LiteLLM routing
 """
 
 import os
@@ -51,7 +48,6 @@ cost_tracker = CostTracker(model_alias=MODEL_ALIAS)
 svc = bentoml.Service(name=f"bentoml-{MODEL_ALIAS}")
 
 
-
 @svc.api(input=JSON(), output=JSON(), route="/generate")
 def generate(payload: dict) -> dict:
     prompt = payload.get("prompt", "")
@@ -79,6 +75,25 @@ def generate(payload: dict) -> dict:
         error=error,
     )
 
+    # ----------------------------------------------------------------------
+    # TODO: Log Observability Trace for /generate Endpoint
+    # ----------------------------------------------------------------------
+    # Instructions: Send execution details to Langfuse using `log_trace(...)`.
+    # Map the following arguments:
+    #   - name: "manufacturing-inference"
+    #   - model: MODEL_ALIAS
+    #   - prompt: prompt
+    #   - response_text: text
+    #   - input_tokens: input_tokens
+    #   - output_tokens: output_tokens
+    #   - latency_ms: t.elapsed_ms
+    #   - success: success
+    #   - input_cost: usage.input_cost
+    #   - output_cost: usage.output_cost
+    #   - estimated_cost: usage.estimated_cost
+    #   - error: error
+    #
+    # Write the following block:
     log_trace(
         name="manufacturing-inference",
         model=MODEL_ALIAS,
@@ -86,7 +101,6 @@ def generate(payload: dict) -> dict:
         response_text=text,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
-        #latency_ms=latency_ms,
         latency_ms=t.elapsed_ms,
         success=success,
         input_cost=usage.input_cost,
@@ -106,8 +120,7 @@ def generate(payload: dict) -> dict:
 
 @svc.api(input=JSON(), output=JSON(), route="/v1/chat/completions")
 def chat_completions(payload: dict) -> dict:
-    """Minimal OpenAI-compatible endpoint so LiteLLM can proxy to this
-    BentoML service using `custom_llm_provider: openai` + `api_base`."""
+    """Minimal OpenAI-compatible endpoint so LiteLLM can proxy to this BentoML service."""
     messages = payload.get("messages", [])
     prompt = messages[-1]["content"] if messages else ""
     max_tokens = payload.get("max_tokens")
@@ -131,6 +144,25 @@ def chat_completions(payload: dict) -> dict:
         error=error,
     )
 
+    # ----------------------------------------------------------------------
+    # TODO: Log Observability Trace for OpenAI Chat Completions Endpoint
+    # ----------------------------------------------------------------------
+    # Instructions: Send execution details to Langfuse using `log_trace(...)`.
+    # Map the following arguments:
+    #   - name: "manufacturing-inference-openai"
+    #   - model: MODEL_ALIAS
+    #   - prompt: prompt
+    #   - response_text: text
+    #   - input_tokens: input_tokens
+    #   - output_tokens: output_tokens
+    #   - latency_ms: t.elapsed_ms
+    #   - success: success
+    #   - input_cost: usage.input_cost
+    #   - output_cost: usage.output_cost
+    #   - estimated_cost: usage.estimated_cost
+    #   - error: error
+    #
+    # Write the following block:
     log_trace(
         name="manufacturing-inference-openai",
         model=MODEL_ALIAS,

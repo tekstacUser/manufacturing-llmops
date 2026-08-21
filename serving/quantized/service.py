@@ -1,18 +1,13 @@
 """
-BentoML service exposing a llama.cpp-backed Qwen2.5 model.
+BentoML service exposing a llama.cpp-backed Qwen2.5 model (Quantized Variant).
 
-This exact file is reused (with different environment variables) by the
-small, medium and quantized services - see serving/medium/service.py and
-serving/quantized/service.py, which are thin copies pointing at a different
-MODEL_ALIAS / MODEL_PATH.
+This service runs the quantized model variant and points to its corresponding 
+MODEL_ALIAS and MODEL_PATH defaults.
 
 Endpoints:
-  GET  /healthz                  -> health check (SK-JF5-01)
-  POST /generate                 -> simple {"prompt": "..."} inference,
-                                     returns token counts + cost + latency
-  POST /v1/chat/completions      -> OpenAI-compatible endpoint so LiteLLM
-                                     (SK-JF5-04) can route to this service
-                                     using the standard "openai" provider.
+  GET  /healthz                 -> health check
+  POST /generate                -> simple {"prompt": "..."} inference
+  POST /v1/chat/completions      -> OpenAI-compatible endpoint for LiteLLM routing
 """
 
 import os
@@ -31,8 +26,11 @@ from common.tracing import log_trace  # noqa: E402
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("service")
 
+# Quantized model default configurations
 MODEL_ALIAS = os.environ.get("MODEL_ALIAS", "quantized-model")
-MODEL_PATH = os.environ.get("MODEL_PATH", "/models/qwen-1.5b-q4/qwen2.5-1.5b-instruct-q4_k_m.gguf")
+MODEL_PATH = os.environ.get(
+    "MODEL_PATH", "/models/qwen-1.5b-q4/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+)
 N_CTX = int(os.environ.get("LLAMA_CTX_SIZE", "2048"))
 N_THREADS = int(os.environ.get("LLAMA_THREADS", "2"))
 MAX_TOKENS = int(os.environ.get("LLAMA_MAX_TOKENS", "256"))
@@ -49,7 +47,6 @@ engine.load()
 cost_tracker = CostTracker(model_alias=MODEL_ALIAS)
 
 svc = bentoml.Service(name=f"bentoml-{MODEL_ALIAS}")
-
 
 
 @svc.api(input=JSON(), output=JSON(), route="/generate")
@@ -79,6 +76,25 @@ def generate(payload: dict) -> dict:
         error=error,
     )
 
+    # ----------------------------------------------------------------------
+    # TODO: Log Observability Trace for /generate Endpoint
+    # ----------------------------------------------------------------------
+    # Instructions: Send execution details to Langfuse using `log_trace(...)`.
+    # Map the following parameters:
+    #   - name: "manufacturing-inference"
+    #   - model: MODEL_ALIAS
+    #   - prompt: prompt
+    #   - response_text: text
+    #   - input_tokens: input_tokens
+    #   - output_tokens: output_tokens
+    #   - latency_ms: t.elapsed_ms
+    #   - input_cost: usage.input_cost
+    #   - output_cost: usage.output_cost
+    #   - estimated_cost: usage.estimated_cost
+    #   - success: success
+    #   - error: error
+    #
+    # Write the following block:
     log_trace(
         name="manufacturing-inference",
         model=MODEL_ALIAS,
@@ -105,8 +121,7 @@ def generate(payload: dict) -> dict:
 
 @svc.api(input=JSON(), output=JSON(), route="/v1/chat/completions")
 def chat_completions(payload: dict) -> dict:
-    """Minimal OpenAI-compatible endpoint so LiteLLM can proxy to this
-    BentoML service using `custom_llm_provider: openai` + `api_base`."""
+    """Minimal OpenAI-compatible endpoint so LiteLLM can proxy to this BentoML service."""
     messages = payload.get("messages", [])
     prompt = messages[-1]["content"] if messages else ""
     max_tokens = payload.get("max_tokens")
@@ -130,6 +145,25 @@ def chat_completions(payload: dict) -> dict:
         error=error,
     )
 
+    # ----------------------------------------------------------------------
+    # TODO: Log Observability Trace for OpenAI Chat Completions Endpoint
+    # ----------------------------------------------------------------------
+    # Instructions: Send execution details to Langfuse using `log_trace(...)`.
+    # Map the following parameters:
+    #   - name: "manufacturing-inference-openai"
+    #   - model: MODEL_ALIAS
+    #   - prompt: prompt
+    #   - response_text: text
+    #   - input_tokens: input_tokens
+    #   - output_tokens: output_tokens
+    #   - latency_ms: t.elapsed_ms
+    #   - input_cost: usage.input_cost
+    #   - output_cost: usage.output_cost
+    #   - estimated_cost: usage.estimated_cost
+    #   - success: success
+    #   - error: error
+    #
+    # Write the following block:
     log_trace(
         name="manufacturing-inference-openai",
         model=MODEL_ALIAS,

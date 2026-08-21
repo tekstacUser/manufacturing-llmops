@@ -1,18 +1,43 @@
-# Simulated local pricing used ONLY for token-cost-tracking exercises (SK-JF5-09).
-# These numbers are not real API prices - they exist so students can practice
-# computing input/output/total cost from token counts.
+# =============================================================
+# Model Pricing & Token Tracking Configuration
+# =============================================================
+# Simulated local pricing used for token-cost-tracking exercises.
+# Used to calculate input, output, and total token costs.
+# =============================================================
+
+# TODO: Define model pricing map under top-level key 'pricing:'
+#
+# Configure token costs per 1,000 tokens for all three models:
+#
+# 1. Small model rate entry:
+#    - Sub-key for prompt token rate: 0.0002
+#    - Sub-key for completion token rate: 0.0004
+#
+# 2. Medium model rate entry:
+#    - Sub-key for prompt token rate: 0.0005
+#    - Sub-key for completion token rate: 0.0010
+#
+# 3. Quantized model rate entry:
+#    - Sub-key for prompt token rate: 0.0003
+#    - Sub-key for completion token rate: 0.0006
+#
+# TODO: Set global currency key at the top level set to standard US currency ("USD")
 
 pricing:
-  small-model:
-    input_per_1k_tokens: 0.0002
-    output_per_1k_tokens: 0.0004
+  # TODO: Configure pricing for small model alias
+  # <SMALL_MODEL_ALIAS>:
+  #   <INPUT_PER_1K_KEY>: 0.0002
+  #   <OUTPUT_PER_1K_KEY>: 0.0004
 
-  medium-model:
-    input_per_1k_tokens: 0.0005
-    output_per_1k_tokens: 0.0010
+  # TODO: Configure pricing for medium model alias
+  # <MEDIUM_MODEL_ALIAS>:
+  #   <INPUT_PER_1K_KEY>: 0.0005
+  #   <OUTPUT_PER_1K_KEY>: 0.0010
 
-  quantized-model:
-    input_per_1k_tokens: 0.0003
-    output_per_1k_tokens: 0.0006
+  # TODO: Configure pricing for quantized model alias
+  # <QUANTIZED_MODEL_ALIAS>:
+  #   <INPUT_PER_1K_KEY>: 0.0003
+  #   <OUTPUT_PER_1K_KEY>: 0.0006
 
-currency: "USD"
+# TODO: Define top-level currency field
+# <CURRENCY_KEY>: "USD"

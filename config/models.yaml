@@ -1,34 +1,57 @@
-# Model registry for the Manufacturing Maintenance Intelligence Platform.
+# =============================================================
+# Manufacturing Maintenance Intelligence Platform - Model Registry
+# =============================================================
 # Paths are CONTAINER-internal paths (mounted from ./models on the host).
+# Configure model entries, backend engines, paths, and execution settings.
+# =============================================================
+
+# TODO: Define model registry dictionary under top-level key 'models:'
+#
+# Configure 3 models with the following key requirements:
+# 
+# 1. Define key for the default lightweight model:
+#    - display_name: "Qwen2.5-0.5B-Instruct GGUF"
+#    - role: "simple / default"
+#    - path: "/models/qwen-0.5b/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+#    - specify local backend engine (e.g., standard C/C++ GGUF inference framework)
+#    - served_by: "bentoml-small"
+#    - context_size: 2048
+#    - threads: 2
+#    - max_tokens: 256
+#
+# 2. Define key for the complex/medium model:
+#    - display_name: "Qwen2.5-1.5B-Instruct GGUF"
+#    - role: "complex / medium"
+#    - path: "/models/qwen-1.5b/qwen2.5-1.5b-instruct-fp16.gguf"
+#    - specify local backend engine (e.g., standard C/C++ GGUF inference framework)
+#    - served_by: "bentoml-medium"
+#    - context_size: 2048
+#    - threads: 2
+#    - max_tokens: 256
+#
+# 3. Define key for the optimized/quantized model:
+#    - display_name: "Qwen2.5-1.5B-Instruct Q4_K_M GGUF"
+#    - role: "quantized / optimization"
+#    - path: "/models/qwen-1.5b-q4/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+#    - specify local backend engine (e.g., standard C/C++ GGUF inference framework)
+#    - served_by: "bentoml-quantized"
+#    - context_size: 2048
+#    - threads: 2
+#    - max_tokens: 256
+#    - link base model alias (reference to the unquantized medium model key)
 
 models:
-  small-model:
-    display_name: "Qwen2.5-0.5B-Instruct GGUF"
-    role: "simple / default"
-    path: "/models/qwen-0.5b/qwen2.5-0.5b-instruct-q4_k_m.gguf"
-    engine: "llama.cpp"
-    served_by: "bentoml-small"
-    context_size: 2048
-    threads: 2
-    max_tokens: 256
+  # TODO: Add configuration for default lightweight model alias
+  # <SMALL_MODEL_KEY>:
+  #   display_name: "..."
+  #   ...
 
-  medium-model:
-    display_name: "Qwen2.5-1.5B-Instruct GGUF"
-    role: "complex / medium"
-    path: "/models/qwen-1.5b/qwen2.5-1.5b-instruct-fp16.gguf"
-    engine: "llama.cpp"
-    served_by: "bentoml-medium"
-    context_size: 2048
-    threads: 2
-    max_tokens: 256
+  # TODO: Add configuration for complex medium model alias
+  # <MEDIUM_MODEL_KEY>:
+  #   display_name: "..."
+  #   ...
 
-  quantized-model:
-    display_name: "Qwen2.5-1.5B-Instruct Q4_K_M GGUF"
-    role: "quantized / optimization"
-    path: "/models/qwen-1.5b-q4/qwen2.5-1.5b-instruct-q4_k_m.gguf"
-    engine: "llama.cpp"
-    served_by: "bentoml-quantized"
-    context_size: 2048
-    threads: 2
-    max_tokens: 256
-    quantized_from: "medium-model"
+  # TODO: Add configuration for quantized model alias
+  # <QUANTIZED_MODEL_KEY>:
+  #   display_name: "..."
+  #   ...

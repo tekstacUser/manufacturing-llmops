@@ -38,7 +38,7 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
     volumes:
-      - ./models/qwen-0.5b:/models/qwen-0.5b:ro
+      - ./models_app/qwen-0.5b:/models/qwen-0.5b:ro
       - ./config:/app/config:ro
     ports:
       - "${SMALL_SERVICE_PORT:-3001}:3000"
@@ -72,7 +72,7 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
     volumes:
-      - ./models/qwen-1.5b:/models/qwen-1.5b:ro
+      - ./models_app/qwen-1.5b:/models/qwen-1.5b:ro
       - ./config:/app/config:ro
     ports:
       - "${MEDIUM_SERVICE_PORT:-3002}:3000"
@@ -107,7 +107,7 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
     volumes:
-      - ./models/qwen-1.5b-q4:/models/qwen-1.5b-q4:ro
+      - ./models_app/qwen-1.5b-q4:/models/qwen-1.5b-q4:ro
       - ./config:/app/config:ro
     ports:
       - "${QUANTIZED_SERVICE_PORT:-3003}:3000"
